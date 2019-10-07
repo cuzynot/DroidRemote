@@ -27,7 +27,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     // initialize socket and input stream
     private String address = "172.18.52.213";
-    private int port = 9999;
+    private int port = 9997;
     private Socket socket;
     private DataInputStream input;
     private DataOutputStream output;
@@ -35,12 +35,15 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     // sensor dectection
     private SensorManager sensorManager;
-    private Sensor sensor;
-    private double x, y, z;
+    private final float[] accelerometerReading = new float[3];
+    private final float[] magnetometerReading = new float[3];
+    private final float[] rotationMatrix = new float[9];
+    private final float[] orientationAngles = new float[3];
+//    private double x, y, z;
 
     // other vars
     private boolean isActive;
-    private final int DELAY = 300;
+    private final int DELAY = 20;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -61,12 +64,21 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         // init sensor
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
-        sensor = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
-        sensorManager.registerListener(this, sensor, DELAY);
+        Sensor accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+        if (accelerometer != null) {
+            sensorManager.registerListener(this, accelerometer,
+                    SensorManager.SENSOR_DELAY_NORMAL, SensorManager.SENSOR_DELAY_UI);
+        }
+        Sensor magneticField = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
+        if (magneticField != null) {
+            sensorManager.registerListener(this, magneticField,
+                    SensorManager.SENSOR_DELAY_NORMAL, SensorManager.SENSOR_DELAY_UI);
+        }
 
         // init values
         isActive = true;
 
+        // start output thread
         ot = new OutputThread();
         ot.start();
     }
@@ -95,14 +107,15 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     @Override
     public void onSensorChanged(SensorEvent event) {
-        Log.v("rand", "sensorChanged");
-        x = event.values[0];
-        y = event.values[1];
-        z = event.values[2];
-//        ot.sendMsg("x " + event.values[0]);
-//        ot.sendMsg("y " + event.values[1]);
-//        ot.sendMsg("z " + event.values[2]);
+        if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
+            System.arraycopy(event.values, 0, accelerometerReading, 0, accelerometerReading.length);
+        } else if (event.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD) {
+            System.arraycopy(event.values, 0, magnetometerReading, 0, magnetometerReading.length);
+        }
 
+        // Update rotation matrix, which is needed to update orientation angles.
+        SensorManager.getRotationMatrix(rotationMatrix, null, accelerometerReading, magnetometerReading);
+        SensorManager.getOrientation(rotationMatrix, orientationAngles);
     }
 
     @Override
@@ -130,20 +143,23 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 System.out.println(i);
             }
 
-            while (isActive){
-                sendMsg("x " + x);
-                sendMsg("y " + y);
-                sendMsg("z " + z);
+            while (isActive) {
+                sendMsg("z " + orientationAngles[0]);
+                sendMsg("x " + orientationAngles[1]);
+                sendMsg("y " + orientationAngles[2]);
+
+                try {
+                    Thread.sleep(DELAY);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
             }
         }
 
         public void sendMsg(String msg){
             try {
                 output.writeUTF(msg);
-                Thread.sleep(500);
             } catch (IOException e) {
-                e.printStackTrace();
-            } catch (InterruptedException e) {
                 e.printStackTrace();
             }
 
