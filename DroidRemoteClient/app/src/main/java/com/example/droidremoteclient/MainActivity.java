@@ -1,5 +1,10 @@
 package com.example.droidremoteclient;
 
+import android.content.Context;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.os.Bundle;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
@@ -13,21 +18,29 @@ import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
 
-import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.net.ServerSocket;
 import java.net.Socket;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements SensorEventListener {
 
-    //initialize socket and input stream
+    // initialize socket and input stream
     private String address = "172.18.52.213";
     private int port = 9999;
     private Socket socket;
     private DataInputStream input;
     private DataOutputStream output;
+    private OutputThread ot;
+
+    // sensor dectection
+    private SensorManager sensorManager;
+    private Sensor sensor;
+    private double x, y, z;
+
+    // other vars
+    private boolean isActive;
+    private final int DELAY = 300;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -46,12 +59,16 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        Log.v("rand", "running test");
+        // init sensor
+        sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+        sensor = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
+        sensorManager.registerListener(this, sensor, DELAY);
 
-        OutputThread ot = new OutputThread();
+        // init values
+        isActive = true;
+
+        ot = new OutputThread();
         ot.start();
-
-
     }
 
     @Override
@@ -76,6 +93,23 @@ public class MainActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
+    @Override
+    public void onSensorChanged(SensorEvent event) {
+        Log.v("rand", "sensorChanged");
+        x = event.values[0];
+        y = event.values[1];
+        z = event.values[2];
+//        ot.sendMsg("x " + event.values[0]);
+//        ot.sendMsg("y " + event.values[1]);
+//        ot.sendMsg("z " + event.values[2]);
+
+    }
+
+    @Override
+    public void onAccuracyChanged(Sensor sensor, int i) {
+
+    }
+
     private class OutputThread extends Thread{
         public void run(){
             try {
@@ -88,24 +122,31 @@ public class MainActivity extends AppCompatActivity {
                 // sends output to the socket
                 output = new DataOutputStream(socket.getOutputStream());
 
-                String line = "";
-
                 // keep reading until "Over" is input
-                while (!line.equals("Over")){
-                    try {
-                        Thread.sleep(1000);
-                        // line = input.readLine();
-                        output.writeUTF("yeet");
-                        output.flush();
-                    } catch(IOException i) {
-                        System.out.println(i);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                }
+//                while (isActive){
+//                    sendMsg("yeet");
+//                }
             } catch(IOException i) {
                 System.out.println(i);
             }
+
+            while (isActive){
+                sendMsg("x " + x);
+                sendMsg("y " + y);
+                sendMsg("z " + z);
+            }
+        }
+
+        public void sendMsg(String msg){
+            try {
+                output.writeUTF(msg);
+                Thread.sleep(500);
+            } catch (IOException e) {
+                e.printStackTrace();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
         }
     }
 }
