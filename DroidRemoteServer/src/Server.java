@@ -65,8 +65,8 @@ public class Server {
 	private class ScrollThread extends Thread {
 
 		private Robot robot;
-		private final int SCROLL_DELAY = 80;
-		private final double X_FACTOR = 10;
+		private int scrollDelay = 50;
+		private final double X_FACTOR = 0.2;
 
 		public ScrollThread() {
 			try {
@@ -78,37 +78,42 @@ public class Server {
 
 		public void run() {
 			while (isActive) {
-				//				scrollDelay = (int)(10 / Math.abs(x));
-				//
-				//				System.out.println(scrollDelay);
-				//				if (scrollDelay > 30 && scrollDelay < 200) {
-				//					// System.out.println("rather neutral");
-				//					//					if (x < 0) {
-				//					//						robot.mouseWheel(-1);
-				//					//					} else {
-				//					//						robot.mouseWheel(1);
-				//					//					}
-				//					robot.mouseWheel((int)(Math.round(x * X_FACTOR)));
-				//					try {
-				//						Thread.sleep(scrollDelay);
-				//					} catch (InterruptedException e) {
-				//						e.printStackTrace();
-				//					}
-				//				}
+				scrollDelay = (int)(20 / Math.abs(x)) * 2;
 
-				int notches = (int)(Math.log(1 + Math.abs(x) * X_FACTOR));
-				//				System.out.println(notches);
-				if (x > 0) {
-					robot.mouseWheel(notches);
-				} else {
-					robot.mouseWheel(-notches);
+				System.out.println(scrollDelay);
+				if (scrollDelay > 20 && scrollDelay < 300) {
+					// System.out.println("rather neutral");
+					if (x < 0) {
+						robot.mouseWheel(-1);
+					} else {
+						robot.mouseWheel(1);
+					}
+					//robot.mouseWheel((int)(Math.round(x * X_FACTOR)));
+					try {
+						Thread.sleep(scrollDelay);
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
 				}
 
-				try {
-					Thread.sleep(SCROLL_DELAY);
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}				
+				//				int notches = (int)(Math.log(1 + Math.abs(x) * X_FACTOR));
+				//				System.out.println(notches);				
+
+				//				if (x > 0) {
+				//					x -= X_FACTOR;
+				//				} else if (x < 0) {
+				//					x += X_FACTOR;
+				//				}
+				//				
+				//				int notches = (int)(Math.round(x));
+				//				
+				//				robot.mouseWheel(notches);
+
+//				try {
+//					Thread.sleep(scrollDelay);
+//				} catch (InterruptedException e) {
+//					e.printStackTrace();
+//				}				
 			}
 
 		}
