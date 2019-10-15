@@ -1,5 +1,6 @@
 import java.awt.AWTException;
 import java.awt.Robot;
+import java.awt.event.KeyEvent;
 import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.EOFException;
@@ -10,16 +11,16 @@ import java.net.Socket;
 public class Server {
 
 	// initialize socket and input stream 
-	private int port = 9997; /////////////////////////////////////////
 	private Socket socket; 
 	private ServerSocket server; 
 	private DataInputStream input;
 
 	// position vars
-	private double x, y, z;
+	private double x, gz;
 
 	// other vars
 	private boolean isActive;
+	private int tabChange;
 
 	public static void main(String[] args) {
 		new Server();
@@ -28,8 +29,10 @@ public class Server {
 	// constructor with port 
 	public Server() { 
 		// starts server and waits for a connection 
-		try { 
+		try {
+			int port = 9997; /////////////////////////////////////////
 			isActive = true;
+			tabChange = 0;
 
 			server = new ServerSocket(port); 
 			System.out.println("Server started\nWaiting for a client ..."); 
@@ -41,6 +44,7 @@ public class Server {
 			// takes input from the client socket 
 			input = new DataInputStream(new BufferedInputStream(socket.getInputStream()));
 
+			// create input and scroll threads
 			InputThread it = new InputThread();
 			it.start();
 
@@ -65,10 +69,11 @@ public class Server {
 	private class ScrollThread extends Thread {
 
 		private Robot robot;
-		private int scrollDelay = 50;
+		private int scrollDelay = 30;
 		private final double DELAY_FACTOR = 50;
 		private final double DELAY_LOWER_BOUND = 20;
 		private final double DELAY_HIGHER_BOUND = 300;
+		private final double TAB_CHANGE_FACTOR = 3;
 
 		public ScrollThread() {
 			try {
@@ -96,7 +101,30 @@ public class Server {
 					} catch (InterruptedException e) {
 						e.printStackTrace();
 					}
-				}		
+				}
+
+				if (gz > TAB_CHANGE_FACTOR) {
+					System.out.println("TO THE LEFTTTTT");
+					tabChange = -1;
+				} else if (gz < -TAB_CHANGE_FACTOR) {
+					System.out.println("TO THE RIGHTTTT");
+					tabChange = 1;
+				} else if (tabChange == -1) {
+					robot.keyPress(KeyEvent.VK_CONTROL);
+					robot.keyPress(KeyEvent.VK_SHIFT);
+					robot.keyPress(KeyEvent.VK_TAB);
+					robot.keyRelease(KeyEvent.VK_CONTROL);
+					robot.keyRelease(KeyEvent.VK_SHIFT);
+					robot.keyRelease(KeyEvent.VK_TAB);
+					tabChange = 0;
+				} else if (tabChange == 1) {
+					robot.keyPress(KeyEvent.VK_CONTROL);
+					robot.keyPress(KeyEvent.VK_TAB);
+					robot.keyRelease(KeyEvent.VK_CONTROL);
+					robot.keyRelease(KeyEvent.VK_TAB);
+					tabChange = 0;
+				}
+
 			}
 
 		}
@@ -112,12 +140,17 @@ public class Server {
 
 					if (c == 'x') {
 						x = Double.parseDouble(line.substring(2));
-					} else if (c == 'y') {
-						y = Double.parseDouble(line.substring(2));
-					} else if (c == 'z') {
-						z = Double.parseDouble(line.substring(2));
+						//					} else if (c == 'y') {
+						//						y = Double.parseDouble(line.substring(2));
+						//					} else if (c == 'z') {
+						//						z = Double.parseDouble(line.substring(2));
+						//					} else if (c == 'a') {
+						//						gx = Double.parseDouble(line.substring(2));
+						//					} else if (c == 'b') {
+						//						gy = Double.parseDouble(line.substring(2));
+					} else if (c == 'g') {
+						gz = Double.parseDouble(line.substring(2));
 					}
-					//					System.out.println(x + " " + y + " " + z);
 				} catch(IOException e) { 
 					System.out.println(e); 
 					break;
@@ -125,6 +158,7 @@ public class Server {
 			}
 			System.out.println("end of reading");
 			closeConnections();
+			System.exit(0);
 		}
 	}
 
