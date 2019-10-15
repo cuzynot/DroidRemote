@@ -17,16 +17,28 @@ import android.util.Log;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.TextView;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.net.Socket;
 
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
 
     // initialize socket and input stream
-    private String address = "172.18.52.213";
+    private String ip = "-1";
     private int port = 9997;
     private Socket socket;
     private DataInputStream input;
@@ -39,11 +51,18 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private final float[] magnetometerReading = new float[3];
     private final float[] rotationMatrix = new float[9];
     private final float[] orientationAngles = new float[3];
-//    private double x, y, z;
+
+    // UI
+    private EditText ipField;
+    private Button tempActivation;
+    private TextView curStatus;
 
     // other vars
-    private boolean isActive;
+    private boolean isActive = true;
     private final int DELAY = 20;
+    private String fileString = "record.txt";
+
+    private Context tempContext;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -62,7 +81,16 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             }
         });
 
-        // init sensor
+        tempContext = this;
+        initSensors();
+        initUI();
+
+        //writeFile("yammm");
+    }
+
+    // PRIVATE METHODS
+
+    private void initSensors() {
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         Sensor accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         if (accelerometer != null) {
@@ -74,14 +102,75 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             sensorManager.registerListener(this, magneticField,
                     SensorManager.SENSOR_DELAY_NORMAL, SensorManager.SENSOR_DELAY_UI);
         }
+    }
 
-        // init values
-        isActive = true;
+    private void initUI(){
+        ipField = findViewById(R.id.ipField);
+        tempActivation = findViewById(R.id.tempActivation);
+        curStatus = findViewById(R.id.curStatus);
 
+        // initialize ip field text as previous ip address
+        ipField.setText(readFromFile());
+
+        tempContext = this;
+
+        tempActivation.setOnClickListener(new View.OnClickListener(){
+            @Override
+            public void onClick(View view) {
+                // get new ip address
+                ip = ipField.getText().toString();
+
+                // record new ip address
+                writeToFile(ip);
+                Log.v("rand", "written " + ip);
+
+                // initialize thread
+                initThread();
+
+                curStatus.setText("Connected");
+            }
+        });
+    }
+
+    private void initThread() {
         // start output thread
         ot = new OutputThread();
         ot.start();
     }
+
+    private String readFromFile() {
+
+        String s = "";
+
+        try {
+            InputStreamReader isr = new InputStreamReader(openFileInput(fileString));
+            BufferedReader br = new BufferedReader(isr);
+            s = br.readLine();
+
+            br.close();
+            isr.close();
+        }
+        catch (FileNotFoundException e) {
+            Log.e("login activity", "File not found: " + e.toString());
+        } catch (IOException e) {
+            Log.e("login activity", "Can not read file: " + e.toString());
+        }
+
+        return s;
+    }
+
+    private void writeToFile(String data) {
+        try {
+            OutputStreamWriter osw = new OutputStreamWriter(openFileOutput(fileString, Context.MODE_PRIVATE));
+            osw.write(data);
+            osw.close();
+        }
+        catch (IOException e) {
+            Log.e("Exception", "File write failed: " + e.toString());
+        }
+    }
+
+    // PUBLIC METHODS
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -123,10 +212,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     }
 
+    // INNER CLASSES
+
     private class OutputThread extends Thread{
         public void run(){
             try {
-                socket = new Socket(address, port);
+                socket = new Socket(ip, port);
                 Log.v("rand", "Connected");
 
                 // takes input from terminal
@@ -134,11 +225,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
                 // sends output to the socket
                 output = new DataOutputStream(socket.getOutputStream());
-
-                // keep reading until "Over" is input
-//                while (isActive){
-//                    sendMsg("yeet");
-//                }
             } catch(IOException i) {
                 System.out.println(i);
             }
