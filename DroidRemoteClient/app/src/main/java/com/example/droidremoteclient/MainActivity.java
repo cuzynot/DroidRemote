@@ -2,6 +2,7 @@
 package com.example.droidremoteclient;
 
 import android.content.Context;
+import android.graphics.Color;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -20,18 +21,12 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.TextView;
 
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
-import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
@@ -57,7 +52,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     // UI
     private EditText ipField;
     private Button activationButton;
-    private TextView curStatus;
+    private Toolbar toolbar;
 
     // other vars
     private boolean isActive = true;
@@ -69,14 +64,13 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         super.onCreate(savedInstanceState);
 
         setContentView(R.layout.activity_main);
-        Toolbar toolbar = findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);
+
 
         FloatingActionButton fab = findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
+                Snackbar.make(view, "oops came with 'basic activity'", Snackbar.LENGTH_LONG)
                         .setAction("Action", null).show();
             }
         });
@@ -109,7 +103,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private void initUI(){
         ipField = findViewById(R.id.ipField);
         activationButton = findViewById(R.id.activationButton);
-        curStatus = findViewById(R.id.curStatus);
+        // curStatus = findViewById(R.id.curStatus);
+
+        toolbar = findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
+        toolbar.setBackgroundColor(Color.BLACK);
 
         // initialize ip field text as previous ip address
         ipField.setText(readFromFile());
@@ -126,8 +124,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
                 // initialize thread
                 initThread();
-
-                curStatus.setText("Connected");
             }
         });
     }
@@ -218,21 +214,29 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     private class OutputThread extends Thread{
         public void run(){
-            try {
-                socket = new Socket(ip, port);
-                Log.v("rand", "Connected");
 
-                // takes input from terminal
-                input = new DataInputStream(System.in);
+            boolean connected = false;
 
-                // sends output to the socket
-                output = new DataOutputStream(socket.getOutputStream());
-            } catch(IOException i) {
-                System.out.println(i);
+            while (!connected) {
+                connected = true;
+                try {
+                    socket = new Socket(ip, port);
+                    Log.v("rand", "Connected");
+
+                    // takes input from terminal
+                    input = new DataInputStream(System.in);
+
+                    // sends output to the socket
+                    output = new DataOutputStream(socket.getOutputStream());
+                } catch (IOException i) {
+                    System.out.println(i);
+                    connected = false;
+                    toolbar.setBackgroundColor(Color.RED);
+                }
             }
 
-            // calibrate inital azimuth
-//            sendMsg("a " + orientationAngles[0]);
+            // connected successfully
+            toolbar.setBackgroundColor(Color.GREEN);
 
             while (isActive) {
                 sendMsg("z " + orientationAngles[0]);
