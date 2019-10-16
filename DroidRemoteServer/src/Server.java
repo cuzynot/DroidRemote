@@ -16,7 +16,7 @@ public class Server {
 	private DataInputStream input;
 
 	// position vars
-	private double x, gz;
+	private double x, y, z;
 
 	// other vars
 	private boolean isActive;
@@ -73,7 +73,7 @@ public class Server {
 		private final double DELAY_FACTOR = 50;
 		private final double DELAY_LOWER_BOUND = 20;
 		private final double DELAY_HIGHER_BOUND = 300;
-		private final double TAB_CHANGE_FACTOR = 3;
+		private final double TAB_CHANGE_FACTOR = 0.5;
 
 		public ScrollThread() {
 			try {
@@ -87,7 +87,9 @@ public class Server {
 			while (isActive) {
 				scrollDelay = (int)(DELAY_FACTOR / Math.abs(x));
 
-				System.out.println(scrollDelay);
+				//				System.out.println(scrollDelay);
+
+				System.out.println(y + " " + scrollDelay);
 				if (scrollDelay > DELAY_LOWER_BOUND && scrollDelay < DELAY_HIGHER_BOUND) {
 					// System.out.println("rather neutral");
 					if (x < 0) {
@@ -103,10 +105,10 @@ public class Server {
 					}
 				}
 
-				if (gz > TAB_CHANGE_FACTOR) {
+				if (y < -TAB_CHANGE_FACTOR) {
 					System.out.println("TO THE LEFTTTTT");
 					tabChange = -1;
-				} else if (gz < -TAB_CHANGE_FACTOR) {
+				} else if (y > TAB_CHANGE_FACTOR) {
 					System.out.println("TO THE RIGHTTTT");
 					tabChange = 1;
 				} else if (tabChange == -1) {
@@ -140,16 +142,16 @@ public class Server {
 
 					if (c == 'x') {
 						x = Double.parseDouble(line.substring(2));
-						//					} else if (c == 'y') {
-						//						y = Double.parseDouble(line.substring(2));
-						//					} else if (c == 'z') {
-						//						z = Double.parseDouble(line.substring(2));
-						//					} else if (c == 'a') {
-						//						gx = Double.parseDouble(line.substring(2));
+					} else if (c == 'y') {
+						y = Double.parseDouble(line.substring(2));
+					} else if (c == 'z') {
+						z = Double.parseDouble(line.substring(2));
+//					} else if (c == 'a') {
+//						iz = Double.parseDouble(line.substring(2));
 						//					} else if (c == 'b') {
 						//						gy = Double.parseDouble(line.substring(2));
 					} else if (c == 'g') {
-						gz = Double.parseDouble(line.substring(2));
+						//						gz = Double.parseDouble(line.substring(2));
 					}
 				} catch(IOException e) { 
 					System.out.println(e); 
