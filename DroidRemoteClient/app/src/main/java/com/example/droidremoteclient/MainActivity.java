@@ -47,15 +47,13 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private final float[] magnetometerReading = new float[3];
     private final float[] rotationMatrix = new float[9];
     private final float[] orientationAngles = new float[3];
-    private final float[] gyroscopeReading = new float[3];
 
     // UI
     private EditText ipField;
-    private Button activationButton;
     private Toolbar toolbar;
 
     // other vars
-    private boolean isActive = true;
+    private boolean pausePressed = false;
     private final int DELAY = 20;
     private String fileString = "record.txt";
 
@@ -65,17 +63,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         setContentView(R.layout.activity_main);
 
-
-        FloatingActionButton fab = findViewById(R.id.fab);
-        fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Snackbar.make(view, "oops came with 'basic activity'", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
-            }
-        });
-
+        // initialize sensors
         initSensors();
+
+        // initialize ui components
         initUI();
     }
 
@@ -93,26 +84,25 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             sensorManager.registerListener(this, magneticField,
                     SensorManager.SENSOR_DELAY_NORMAL, SensorManager.SENSOR_DELAY_UI);
         }
-        Sensor gyroscope = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
-        if (gyroscope != null) {
-            sensorManager.registerListener(this, gyroscope,
-                    SensorManager.SENSOR_DELAY_NORMAL, SensorManager.SENSOR_DELAY_UI);
-        }
     }
 
     private void initUI(){
+        // ip address field
         ipField = findViewById(R.id.ipField);
-        activationButton = findViewById(R.id.activationButton);
-        // curStatus = findViewById(R.id.curStatus);
+        // initialize ip field text as previous ip address
+        ipField.setText(readFromFile());
 
+        // buttons
+        Button connectButton = findViewById(R.id.connectButton);
+        Button pauseButton = findViewById(R.id.pauseButton);
+
+        // toolbar
         toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         toolbar.setBackgroundColor(Color.BLACK);
 
-        // initialize ip field text as previous ip address
-        ipField.setText(readFromFile());
-
-        activationButton.setOnClickListener(new View.OnClickListener(){
+        // connect button click listener
+        connectButton.setOnClickListener(new View.OnClickListener(){
             @Override
             public void onClick(View view) {
                 // get new ip address
@@ -124,6 +114,20 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
                 // initialize thread
                 initThread();
+            }
+        });
+
+        // pause button click listener
+        pauseButton.setOnClickListener(new View.OnClickListener(){
+            @Override
+            public void onClick(View view) {
+                pausePressed = !pausePressed;
+
+                if (pausePressed) {
+                    toolbar.setBackgroundColor(Color.GRAY);
+                } else {
+                    toolbar.setBackgroundColor(Color.GREEN);
+                }
             }
         });
     }
@@ -196,8 +200,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             System.arraycopy(event.values, 0, accelerometerReading, 0, accelerometerReading.length);
         } else if (event.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD) {
             System.arraycopy(event.values, 0, magnetometerReading, 0, magnetometerReading.length);
-        } else if (event.sensor.getType() == Sensor.TYPE_GYROSCOPE){
-            System.arraycopy(event.values, 0, gyroscopeReading, 0, gyroscopeReading.length);
         }
 
         // Update rotation matrix, which is needed to update orientation angles.
@@ -238,14 +240,21 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             // connected successfully
             toolbar.setBackgroundColor(Color.GREEN);
 
-            while (isActive) {
-                sendMsg("z " + orientationAngles[0]);
-                sendMsg("x " + orientationAngles[1]);
-                sendMsg("y " + orientationAngles[2]);
+            while (true) {
+
+                if (!pausePressed) {
+                    sendMsg("i 1");
+                    sendMsg("z " + orientationAngles[0]);
+                    sendMsg("x " + orientationAngles[1]);
+                    sendMsg("y " + orientationAngles[2]);
 
 //                sendMsg("a " + gyroscopeReading[0]);
 //                sendMsg("b " + gyroscopeReading[1]);
 //                sendMsg("g " + gyroscopeReading[2]);
+
+                } else {
+                    sendMsg("i 0");
+                }
 
                 try {
                     Thread.sleep(DELAY);

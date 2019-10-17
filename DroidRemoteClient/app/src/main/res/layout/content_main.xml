@@ -22,13 +22,13 @@
         app:layout_constraintTop_toBottomOf="@+id/ipField" />
 
     <Button
-        android:id="@+id/activationButton"
+        android:id="@+id/connectButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
         android:layout_marginEnd="8dp"
         android:text="B"
-        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintEnd_toStartOf="@+id/pauseButton"
         app:layout_constraintTop_toTopOf="parent" />
 
     <EditText
@@ -41,8 +41,18 @@
         android:ems="10"
         android:inputType="textPersonName"
         android:text="IP Address"
-        app:layout_constraintEnd_toStartOf="@+id/activationButton"
+        app:layout_constraintEnd_toStartOf="@+id/connectButton"
         app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <Button
+        android:id="@+id/pauseButton"
+        android:layout_width="47dp"
+        android:layout_height="49dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginEnd="8dp"
+        android:text="❚❚"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

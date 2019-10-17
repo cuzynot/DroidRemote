@@ -3,8 +3,8 @@ import java.awt.Robot;
 import java.awt.event.KeyEvent;
 import java.io.BufferedInputStream;
 import java.io.DataInputStream;
-import java.io.EOFException;
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 
@@ -35,7 +35,8 @@ public class Server {
 			tabChange = 0;
 
 			server = new ServerSocket(port); 
-			System.out.println("Server started\nWaiting for a client ..."); 
+			System.out.println("Server started\nWaiting for a client ...");
+			System.out.println("Your current IP address : " + InetAddress.getLocalHost());
 
 			// accept client
 			socket = server.accept(); 
@@ -74,6 +75,7 @@ public class Server {
 		private final double DELAY_LOWER_BOUND = 20;
 		private final double DELAY_HIGHER_BOUND = 300;
 		private final double TAB_CHANGE_FACTOR = 0.5;
+		private final int PAUSED_DELAY = 100;
 
 		public ScrollThread() {
 			try {
@@ -84,47 +86,58 @@ public class Server {
 		}
 
 		public void run() {
-			while (isActive) {
-				scrollDelay = (int)(DELAY_FACTOR / Math.abs(x));
+			while (true) {
 
-				//				System.out.println(scrollDelay);
+				if (isActive) {
+					scrollDelay = (int)(DELAY_FACTOR / Math.abs(x));
 
-				System.out.println(y + " " + scrollDelay);
-				if (scrollDelay > DELAY_LOWER_BOUND && scrollDelay < DELAY_HIGHER_BOUND) {
-					// System.out.println("rather neutral");
-					if (x < 0) {
-						robot.mouseWheel(-1);
-					} else {
-						robot.mouseWheel(1);
+					//				System.out.println(scrollDelay);
+
+					System.out.println(y + " " + scrollDelay);
+					if (scrollDelay > DELAY_LOWER_BOUND && scrollDelay < DELAY_HIGHER_BOUND) {
+						// System.out.println("rather neutral");
+						if (x < 0) {
+							robot.mouseWheel(-1);
+						} else {
+							robot.mouseWheel(1);
+						}
+
+						try {
+							Thread.sleep(scrollDelay);
+						} catch (InterruptedException e) {
+							e.printStackTrace();
+						}
 					}
 
+					if (tabChange == 0) {
+						if (y < -TAB_CHANGE_FACTOR) {
+							System.out.println("TO THE LEFTTTTT");
+							tabChange = -1;
+							robot.keyPress(KeyEvent.VK_CONTROL);
+							robot.keyPress(KeyEvent.VK_SHIFT);
+							robot.keyPress(KeyEvent.VK_TAB);
+							robot.keyRelease(KeyEvent.VK_CONTROL);
+							robot.keyRelease(KeyEvent.VK_SHIFT);
+							robot.keyRelease(KeyEvent.VK_TAB);
+						} else if (y > TAB_CHANGE_FACTOR) {
+							System.out.println("TO THE RIGHTTTT");
+							tabChange = 1;
+							robot.keyPress(KeyEvent.VK_CONTROL);
+							robot.keyPress(KeyEvent.VK_TAB);
+							robot.keyRelease(KeyEvent.VK_CONTROL);
+							robot.keyRelease(KeyEvent.VK_TAB);
+						}
+					}
+
+					if (Math.abs(y) <= TAB_CHANGE_FACTOR) {
+						tabChange = 0;
+					}
+				} else {
 					try {
-						Thread.sleep(scrollDelay);
+						Thread.sleep(PAUSED_DELAY);
 					} catch (InterruptedException e) {
 						e.printStackTrace();
 					}
-				}
-
-				if (y < -TAB_CHANGE_FACTOR) {
-					System.out.println("TO THE LEFTTTTT");
-					tabChange = -1;
-				} else if (y > TAB_CHANGE_FACTOR) {
-					System.out.println("TO THE RIGHTTTT");
-					tabChange = 1;
-				} else if (tabChange == -1) {
-					robot.keyPress(KeyEvent.VK_CONTROL);
-					robot.keyPress(KeyEvent.VK_SHIFT);
-					robot.keyPress(KeyEvent.VK_TAB);
-					robot.keyRelease(KeyEvent.VK_CONTROL);
-					robot.keyRelease(KeyEvent.VK_SHIFT);
-					robot.keyRelease(KeyEvent.VK_TAB);
-					tabChange = 0;
-				} else if (tabChange == 1) {
-					robot.keyPress(KeyEvent.VK_CONTROL);
-					robot.keyPress(KeyEvent.VK_TAB);
-					robot.keyRelease(KeyEvent.VK_CONTROL);
-					robot.keyRelease(KeyEvent.VK_TAB);
-					tabChange = 0;
 				}
 
 			}
@@ -134,7 +147,7 @@ public class Server {
 
 	private class InputThread extends Thread{
 		public void run() {
-			while (isActive) { 
+			while (true) {
 				try { 
 					String line = input.readUTF();
 
@@ -146,12 +159,8 @@ public class Server {
 						y = Double.parseDouble(line.substring(2));
 					} else if (c == 'z') {
 						z = Double.parseDouble(line.substring(2));
-//					} else if (c == 'a') {
-//						iz = Double.parseDouble(line.substring(2));
-						//					} else if (c == 'b') {
-						//						gy = Double.parseDouble(line.substring(2));
-					} else if (c == 'g') {
-						//						gz = Double.parseDouble(line.substring(2));
+					} else if (c == 'i') {
+						isActive = Integer.parseInt(line.substring(2)) == 1;
 					}
 				} catch(IOException e) { 
 					System.out.println(e); 
