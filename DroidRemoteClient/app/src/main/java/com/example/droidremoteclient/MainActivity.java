@@ -7,13 +7,18 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.os.Build;
 import android.os.Bundle;
 
+import com.google.android.material.button.MaterialButton;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.snackbar.Snackbar;
 
+import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+import androidx.core.content.ContextCompat;
+import androidx.core.content.res.ResourcesCompat;
 
 import android.util.Log;
 import android.view.View;
@@ -56,6 +61,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private boolean pausePressed = false;
     private final int DELAY = 20;
     private String fileString = "record.txt";
+    private boolean connected = false;
+
+    // colours
+    private int connectedColour = Color.rgb(87, 129, 169);
+    private int disconnectedColour = Color.rgb(86, 70, 80);
+    private int idleColour = Color.GRAY;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -68,6 +79,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         // initialize ui components
         initUI();
+
     }
 
     // PRIVATE METHODS
@@ -99,7 +111,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         // toolbar
         toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-        toolbar.setBackgroundColor(Color.BLACK);
+        toolbar.setBackgroundColor(idleColour);
 
         // connect button click listener
         connectButton.setOnClickListener(new View.OnClickListener(){
@@ -123,10 +135,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             public void onClick(View view) {
                 pausePressed = !pausePressed;
 
-                if (pausePressed) {
-                    toolbar.setBackgroundColor(Color.GRAY);
+                if (pausePressed || !connected) {
+                    toolbar.setBackgroundColor(idleColour);
                 } else {
-                    toolbar.setBackgroundColor(Color.GREEN);
+                    toolbar.setBackgroundColor(connectedColour);
                 }
             }
         });
@@ -217,8 +229,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private class OutputThread extends Thread{
         public void run(){
 
-            boolean connected = false;
-
             while (!connected) {
                 connected = true;
                 try {
@@ -233,12 +243,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 } catch (IOException i) {
                     System.out.println(i);
                     connected = false;
-                    toolbar.setBackgroundColor(Color.RED);
+                    toolbar.setBackgroundColor(disconnectedColour);
                 }
             }
 
             // connected successfully
-            toolbar.setBackgroundColor(Color.GREEN);
+            toolbar.setBackgroundColor(connectedColour);
 
             while (true) {
 
