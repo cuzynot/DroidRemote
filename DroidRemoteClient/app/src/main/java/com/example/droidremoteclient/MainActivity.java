@@ -7,18 +7,10 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
-import android.os.Build;
 import android.os.Bundle;
 
-import com.google.android.material.button.MaterialButton;
-import com.google.android.material.floatingactionbutton.FloatingActionButton;
-import com.google.android.material.snackbar.Snackbar;
-
-import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
-import androidx.core.content.ContextCompat;
-import androidx.core.content.res.ResourcesCompat;
 
 import android.util.Log;
 import android.view.View;
@@ -44,7 +36,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private Socket socket;
     private DataInputStream input;
     private DataOutputStream output;
-    private OutputThread ot;
+//    private OutputThread ot;
 
     // sensor dectection
     private SensorManager sensorManager;
@@ -56,17 +48,18 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     // UI
     private EditText ipField;
     private Toolbar toolbar;
-
-    // other vars
-    private boolean pausePressed = false;
-    private final int DELAY = 20;
-    private String fileString = "record.txt";
-    private boolean connected = false;
+    private Button connectPauseButton;
 
     // colours
     private int connectedColour = Color.rgb(87, 129, 169);
     private int disconnectedColour = Color.rgb(86, 70, 80);
     private int idleColour = Color.GRAY;
+
+    // other vars
+    private boolean pausePressed = false;
+//    private final int DELAY = 20;
+    private String fileString = "record.txt";
+    private boolean connected = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -105,8 +98,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         ipField.setText(readFromFile());
 
         // buttons
-        Button connectButton = findViewById(R.id.connectButton);
-        Button pauseButton = findViewById(R.id.pauseButton);
+        connectPauseButton = findViewById(R.id.connectPauseButton);
 
         // toolbar
         toolbar = findViewById(R.id.toolbar);
@@ -114,40 +106,41 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         toolbar.setBackgroundColor(idleColour);
 
         // connect button click listener
-        connectButton.setOnClickListener(new View.OnClickListener(){
+        connectPauseButton.setOnClickListener(new View.OnClickListener(){
             @Override
             public void onClick(View view) {
-                // get new ip address
-                ip = ipField.getText().toString();
+                if (!connected) {
+                    // get new ip address
+                    ip = ipField.getText().toString();
 
-                // record new ip address
-                writeToFile(ip);
-                Log.v("rand", "written " + ip);
+                    // record new ip address
+                    writeToFile(ip);
+                    Log.v("rand", "written " + ip);
 
-                // initialize thread
-                initThread();
-            }
-        });
-
-        // pause button click listener
-        pauseButton.setOnClickListener(new View.OnClickListener(){
-            @Override
-            public void onClick(View view) {
-                pausePressed = !pausePressed;
-
-                if (pausePressed || !connected) {
-                    toolbar.setBackgroundColor(idleColour);
+                    // initialize thread
+                    new OutputThread().start();
                 } else {
-                    toolbar.setBackgroundColor(connectedColour);
+                    pausePressed = !pausePressed;
+
+                    if (pausePressed) {
+                        runOnUiThread(new Runnable() {
+                            public void run() {
+                                toolbar.setBackgroundColor(idleColour);
+                                connectPauseButton.setText("▶");
+                            }
+                        });
+                    } else {
+                        runOnUiThread(new Runnable() {
+                            public void run() {
+                                toolbar.setBackgroundColor(connectedColour);
+                                connectPauseButton.setText("❚❚");
+                            }
+                        });
+                    }
+
                 }
             }
         });
-    }
-
-    private void initThread() {
-        // start output thread
-        ot = new OutputThread();
-        ot.start();
     }
 
     private String readFromFile() {
@@ -227,51 +220,60 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     // INNER CLASSES
 
     private class OutputThread extends Thread{
+        private final int DELAY = 50;
+
         public void run(){
+//            while (!connected) {
+//                connected = true;
+            try {
+                socket = new Socket(ip, port);
+                Log.v("rand", "Connected");
 
-            while (!connected) {
-                connected = true;
-                try {
-                    socket = new Socket(ip, port);
-                    Log.v("rand", "Connected");
+                // takes input from terminal
+                input = new DataInputStream(System.in);
 
-                    // takes input from terminal
-                    input = new DataInputStream(System.in);
+                // sends output to the socket
+                output = new DataOutputStream(socket.getOutputStream());
 
-                    // sends output to the socket
-                    output = new DataOutputStream(socket.getOutputStream());
-                } catch (IOException i) {
-                    System.out.println(i);
-                    connected = false;
-                    toolbar.setBackgroundColor(disconnectedColour);
+
+
+                runOnUiThread(new Runnable() {
+                    public void run() {
+                        toolbar.setBackgroundColor(connectedColour);
+                        connectPauseButton.setText("❚❚");
+                    }
+                });
+
+                while (true) {
+                    if (!pausePressed) {
+                        sendMsg("i 1");
+                        sendMsg("z " + orientationAngles[0]);
+                        sendMsg("x " + orientationAngles[1]);
+                        sendMsg("y " + orientationAngles[2]);
+
+                    } else {
+                        sendMsg("i 0");
+                    }
+
+                    try {
+                        Thread.sleep(DELAY);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
                 }
+            } catch (IOException e) {
+                Log.v("exception ", e.toString());
+
+                connected = false;
+
+                runOnUiThread(new Runnable() {
+                    public void run() {
+                        toolbar.setBackgroundColor(disconnectedColour);
+                    }
+                });
             }
+//            }
 
-            // connected successfully
-            toolbar.setBackgroundColor(connectedColour);
-
-            while (true) {
-
-                if (!pausePressed) {
-                    sendMsg("i 1");
-                    sendMsg("z " + orientationAngles[0]);
-                    sendMsg("x " + orientationAngles[1]);
-                    sendMsg("y " + orientationAngles[2]);
-
-//                sendMsg("a " + gyroscopeReading[0]);
-//                sendMsg("b " + gyroscopeReading[1]);
-//                sendMsg("g " + gyroscopeReading[2]);
-
-                } else {
-                    sendMsg("i 0");
-                }
-
-                try {
-                    Thread.sleep(DELAY);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
         }
 
         public void sendMsg(String msg){

@@ -35,8 +35,9 @@ public class Server {
 			tabChange = 0;
 
 			server = new ServerSocket(port); 
-			System.out.println("Server started\nWaiting for a client ...");
+			System.out.println("DroidRemote Server started");
 			System.out.println("Your current IP address : " + InetAddress.getLocalHost());
+			System.out.println("Waiting for a client ...");
 
 			// accept client
 			socket = server.accept(); 
@@ -167,7 +168,7 @@ public class Server {
 					break;
 				}
 			}
-			System.out.println("end of reading");
+			System.out.println("CLIENT DISCONNECTED");
 			closeConnections();
 			System.exit(0);
 		}
