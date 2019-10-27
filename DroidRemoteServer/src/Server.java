@@ -162,6 +162,8 @@ public class Server {
 						z = Double.parseDouble(line.substring(2));
 					} else if (c == 'i') {
 						isActive = Integer.parseInt(line.substring(2)) == 1;
+					} else {
+						System.out.println(line);
 					}
 				} catch(IOException e) { 
 					System.out.println(e); 

@@ -2,6 +2,7 @@
 package com.example.droidremoteclient;
 
 import android.content.Context;
+import android.graphics.Canvas;
 import android.graphics.Color;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
@@ -18,6 +19,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.FrameLayout;
 
 import java.io.BufferedReader;
 import java.io.DataInputStream;
@@ -36,19 +38,19 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private Socket socket;
     private DataInputStream input;
     private DataOutputStream output;
-//    private OutputThread ot;
 
     // sensor dectection
     private SensorManager sensorManager;
     private final float[] accelerometerReading = new float[3];
     private final float[] magnetometerReading = new float[3];
     private final float[] rotationMatrix = new float[9];
-    private final float[] orientationAngles = new float[3];
+    public static final float[] orientationAngles = new float[3]; // shh
 
     // UI
     private EditText ipField;
     private Toolbar toolbar;
     private Button connectPauseButton;
+//    private View drawView;
 
     // colours
     private int connectedColour = Color.rgb(87, 129, 169);
@@ -57,9 +59,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     // other vars
     private boolean pausePressed = false;
-//    private final int DELAY = 20;
+    //    private final int DELAY = 20;
     private String fileString = "record.txt";
-    private boolean connected = false;
+    public static boolean connected = false; // shh x 2
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -109,6 +111,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         connectPauseButton.setOnClickListener(new View.OnClickListener(){
             @Override
             public void onClick(View view) {
+                Log.v("rand", "clicked");
                 if (!connected) {
                     // get new ip address
                     ip = ipField.getText().toString();
@@ -120,6 +123,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     // initialize thread
                     new OutputThread().start();
                 } else {
+                    Log.v("rand", "pause pressed");
                     pausePressed = !pausePressed;
 
                     if (pausePressed) {
@@ -235,8 +239,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 // sends output to the socket
                 output = new DataOutputStream(socket.getOutputStream());
 
-
-
+                // update ui to show connection has been established
+                connected = true;
                 runOnUiThread(new Runnable() {
                     public void run() {
                         toolbar.setBackgroundColor(connectedColour);
@@ -246,6 +250,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
                 while (true) {
                     if (!pausePressed) {
+                        // send msg to java program
                         sendMsg("i 1");
                         sendMsg("z " + orientationAngles[0]);
                         sendMsg("x " + orientationAngles[1]);
